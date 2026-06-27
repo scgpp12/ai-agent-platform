@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agent Platform — 基本设计书（代码解说版）</title>
+<style>
+  :root{
+    --indigo:#4f46e5; --indigo-d:#3730a3; --bg:#0f172a; --card:#1e293b;
+    --line:#334155; --text:#e2e8f0; --muted:#94a3b8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Yu Gothic",-apple-system,"Segoe UI",system-ui,"Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--text);line-height:1.65}
+  a{color:#a5b4fc;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+  header{background:linear-gradient(135deg,#312e81,#4f46e5);padding:46px 0 38px}
+  header h1{margin:0 0 8px;font-size:30px}
+  header p{margin:4px 0;color:#e0e7ff}
+  .badges{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
+  .badge{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+         color:#fff;border-radius:999px;padding:3px 12px;font-size:12.5px}
+  .intro{background:var(--card);border-radius:12px;padding:18px 22px;margin:26px 0}
+  .intro b{color:#c7d2fe}
+  h2.sec{font-size:18px;margin:30px 0 12px;padding-left:12px;border-left:5px solid var(--indigo)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;
+        transition:transform .08s,border-color .15s}
+  .card:hover{transform:translateY(-2px);border-color:var(--indigo)}
+  .card .file{font-family:Consolas,monospace;font-size:12px;color:var(--muted)}
+  .card .name{font-size:15px;font-weight:600;margin:3px 0 5px}
+  .card .name a{color:#c7d2fe}
+  .card .desc{font-size:13px;color:#cbd5e1}
+  .card .pdf{display:inline-block;margin-top:8px;font-size:12px;background:var(--indigo);
+             color:#fff!important;border-radius:6px;padding:2px 10px}
+  .card .pdf:hover{background:var(--indigo-d);text-decoration:none}
+  footer{margin:46px 0 30px;color:var(--muted);font-size:13px;text-align:center}
+  .count{color:var(--muted);font-size:13px;font-weight:400;margin-left:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>AI Agent Platform <span style="font-weight:400;font-size:20px">— 基本设计书（代码解说版）</span></h1>
+    <p>营业支援向け「複数AIエージェント統合・オーケストレーション基盤」のミニ実装</p>
+    <p style="font-size:13.5px">本地(FastAPI+Echo/Ollama+SQLite) ↔ AWS(Lambda+Bedrock+DynamoDB+Cognito+API Gateway) 双模式 · 前端 Next.js/Vercel</p>
+    <div class="badges">
+      <span class="badge">Python 3.12 / FastAPI</span>
+      <span class="badge">AWS CDK (TypeScript)</span>
+      <span class="badge">Bedrock · DynamoDB · Cognito</span>
+      <span class="badge">Next.js · Vercel</span>
+      <span class="badge">LangChain 不使用（全自前）</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="intro">
+    本站收录该项目<b>全部源码文件</b>的「基本设计书（代码解说版）」。每份文档统一结构（§0 文档信息 〜 §7 术语表），
+    讲解每个文件的 <b>IN / OUT</b>、<b>调用处（文件:行号）</b>、<b>内部处理逻辑</b>、<b>相互调用关系（Mermaid 图）</b>，专业词汇附<b>中文注释</b>。
+    点各卡片的 <b>PDF</b> 按钮在浏览器中打开。
+  </div>
+
+  <h2 class="sec">① 核心层（平台的心脏）<span class="count">5</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">core/base_agent.py</div><div class="name"><a href="design/base_agent.pdf">base_agent</a></div><div class="desc">全 agent 的基类 BaseAgent / AgentResult</div><a class="pdf" href="design/base_agent.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">core/registry.py</div><div class="name"><a href="design/registry.pdf">registry</a></div><div class="desc">插件登记簿 AgentRegistry</div><a class="pdf" href="design/registry.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">core/orchestrator.py</div><div class="name"><a href="design/orchestrator.pdf">orchestrator</a></div><div class="desc">司令塔：路由 · 串联 · 追踪</div><a class="pdf" href="design/orchestrator.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">core/trace.py</div><div class="name"><a href="design/trace.pdf">trace</a></div><div class="desc">处理耗时 · 状态记录 ExecutionTrace</div><a class="pdf" href="design/trace.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">core/__init__.py</div><div class="name"><a href="design/core_init.pdf">core_init</a></div><div class="desc">核心层 re-export 聚合出口</div><a class="pdf" href="design/core_init.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">② Provider 层（LLM / 嵌入 可替换）<span class="count">5</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">providers/base.py</div><div class="name"><a href="design/providers_base.pdf">providers_base</a></div><div class="desc">LLMProvider / EmbeddingProvider 抽象</div><a class="pdf" href="design/providers_base.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">providers/local_provider.py</div><div class="name"><a href="design/local_provider.pdf">local_provider</a></div><div class="desc">EchoLLM / HashingEmbedding（免模型）</div><a class="pdf" href="design/local_provider.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">providers/ollama_provider.py</div><div class="name"><a href="design/ollama_provider.pdf">ollama_provider</a></div><div class="desc">Ollama 实装</div><a class="pdf" href="design/ollama_provider.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">providers/bedrock_provider.py</div><div class="name"><a href="design/bedrock_provider.pdf">bedrock_provider</a></div><div class="desc">Bedrock 实装（haiku / Titan）</div><a class="pdf" href="design/bedrock_provider.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">providers/__init__.py</div><div class="name"><a href="design/providers_init.pdf">providers_init</a></div><div class="desc">Provider 层 re-export 出口</div><a class="pdf" href="design/providers_init.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">③ Agent（具体 3 种）<span class="count">4</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">agents/knowledge_agent.py</div><div class="name"><a href="design/knowledge_agent.pdf">knowledge_agent</a></div><div class="desc">简易 RAG（检索→生成）</div><a class="pdf" href="design/knowledge_agent.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">agents/dataquery_agent.py</div><div class="name"><a href="design/dataquery_agent.pdf">dataquery_agent</a></div><div class="desc">自然语言→参数→DB 检索</div><a class="pdf" href="design/dataquery_agent.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">agents/summary_agent.py</div><div class="name"><a href="design/summary_agent.pdf">summary_agent</a></div><div class="desc">要约（链式下游）</div><a class="pdf" href="design/summary_agent.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">agents/__init__.py</div><div class="name"><a href="design/agents_init.pdf">agents_init</a></div><div class="desc">Agent 层 re-export 出口</div><a class="pdf" href="design/agents_init.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">④ 数据层（Repository 抽象）<span class="count">4</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">data/customer_repo.py</div><div class="name"><a href="design/customer_repo.pdf">customer_repo</a></div><div class="desc">客户检索 SQLite↔DynamoDB</div><a class="pdf" href="design/customer_repo.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">data/kb_repo.py</div><div class="name"><a href="design/kb_repo.pdf">kb_repo</a></div><div class="desc">知识取得 JSON↔DynamoDB</div><a class="pdf" href="design/kb_repo.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">data/seed.py</div><div class="name"><a href="design/seed.pdf">seed</a></div><div class="desc">SQLite 初始化</div><a class="pdf" href="design/seed.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">data/__init__.py</div><div class="name"><a href="design/data_init.pdf">data_init</a></div><div class="desc">数据层 re-export 出口</div><a class="pdf" href="design/data_init.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑤ 连接器 / 认证<span class="count">5</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">connectors/base.py</div><div class="name"><a href="design/connectors_base.pdf">connectors_base</a></div><div class="desc">Connector / ConnectorRegistry 抽象</div><a class="pdf" href="design/connectors_base.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">connectors/calendar_stub.py</div><div class="name"><a href="design/calendar_stub.pdf">calendar_stub</a></div><div class="desc">外部 Calendar API 的 mock</div><a class="pdf" href="design/calendar_stub.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">connectors/__init__.py</div><div class="name"><a href="design/connectors_init.pdf">connectors_init</a></div><div class="desc">连接器层 re-export 出口</div><a class="pdf" href="design/connectors_init.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">security/auth.py</div><div class="name"><a href="design/auth.pdf">auth</a></div><div class="desc">JWT 验证 Depends（HS256 / Cognito JWKS）</div><a class="pdf" href="design/auth.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">security/__init__.py</div><div class="name"><a href="design/security_init.pdf">security_init</a></div><div class="desc">认证层 re-export 出口</div><a class="pdf" href="design/security_init.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑥ 应用装配（composition root）<span class="count">4</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">config.py</div><div class="name"><a href="design/config.pdf">config</a></div><div class="desc">设置 · backend 开关</div><a class="pdf" href="design/config.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">schemas.py</div><div class="name"><a href="design/schemas.pdf">schemas</a></div><div class="desc">API 输入输出 pydantic</div><a class="pdf" href="design/schemas.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">main.py</div><div class="name"><a href="design/main.pdf">main</a></div><div class="desc">装配 + 各端点（composition root）</div><a class="pdf" href="design/main.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">handler.py</div><div class="name"><a href="design/handler.pdf">handler</a></div><div class="desc">Lambda 入口（Mangum）</div><a class="pdf" href="design/handler.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑦ 测试<span class="count">1</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">tests/test_smoke.py</div><div class="name"><a href="design/test_smoke.pdf">test_smoke</a></div><div class="desc">免模型冒烟测试（7 用例）</div><a class="pdf" href="design/test_smoke.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑧ 基础设施（AWS CDK / TypeScript）<span class="count">2</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">infra/bin/app.ts</div><div class="name"><a href="design/infra_app.pdf">infra_app</a></div><div class="desc">CDK 入口</div><a class="pdf" href="design/infra_app.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">infra/lib/platform-stack.ts</div><div class="name"><a href="design/platform_stack.pdf">platform_stack</a></div><div class="desc">全部资源定义栈</div><a class="pdf" href="design/platform_stack.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑨ 前端（Next.js / Vercel）<span class="count">4</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">frontend/app/layout.tsx</div><div class="name"><a href="design/frontend_layout.pdf">frontend_layout</a></div><div class="desc">根布局</div><a class="pdf" href="design/frontend_layout.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">frontend/app/providers.tsx</div><div class="name"><a href="design/frontend_providers.pdf">frontend_providers</a></div><div class="desc">认证 Provider（mounted 守卫）</div><a class="pdf" href="design/frontend_providers.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">frontend/app/page.tsx</div><div class="name"><a href="design/frontend_page.pdf">frontend_page</a></div><div class="desc">登录 + 聊天 UI</div><a class="pdf" href="design/frontend_page.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">frontend/lib/oidc.ts</div><div class="name"><a href="design/frontend_oidc.pdf">frontend_oidc</a></div><div class="desc">Cognito OIDC 设置</div><a class="pdf" href="design/frontend_oidc.pdf">PDF ↗</a></div>
+  </div>
+
+  <h2 class="sec">⑩ 脚本（运维）<span class="count">3</span></h2>
+  <div class="grid">
+    <div class="card"><div class="file">scripts/build_lambda.sh</div><div class="name"><a href="design/build_lambda.pdf">build_lambda</a></div><div class="desc">免 Docker 打包</div><a class="pdf" href="design/build_lambda.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">scripts/seed_dynamo.py</div><div class="name"><a href="design/seed_dynamo.pdf">seed_dynamo</a></div><div class="desc">DynamoDB 灌数据（Titan 嵌入）</div><a class="pdf" href="design/seed_dynamo.pdf">PDF ↗</a></div>
+    <div class="card"><div class="file">scripts/make_token.py</div><div class="name"><a href="design/make_token.pdf">make_token</a></div><div class="desc">本地测试 JWT 发行</div><a class="pdf" href="design/make_token.pdf">PDF ↗</a></div>
+  </div>
+
+  <footer>
+    共 37 份设计书 · 生成自 <code>docs/md2pdf.py</code>（Markdown→Mermaid HTML→Chrome 打印）<br>
+    AI Agent Platform · 学習・ポートフォリオ用
+  </footer>
+</div>
+</body>
+</html>
