@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/app/data/sales.db
+.env
+
+# Lambda build artifact（scripts/build_lambda.sh で再生成）
+backend/build/
+
+# CDK
+infra/node_modules/
+infra/cdk.out/
+infra/*.js
+infra/*.d.ts
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/next-env.d.ts

@@ -1,0 +1,11 @@
+# 依存最小（LangChain等は使わない＝統合の仕組みを自前で理解するため）
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+PyJWT==2.10.1
+cryptography==44.0.0      # PyJWT の RS256(Cognito JWKS)検証に必要
+mangum==0.19.0            # Lambda 用 ASGI アダプタ
+boto3==1.35.99            # ローカルから Bedrock/DynamoDB を叩く用（Lambda本体は実行時同梱を使う）
+# テスト用
+pytest==8.3.4
+pytest-asyncio==0.25.2

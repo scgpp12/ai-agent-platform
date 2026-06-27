@@ -1,0 +1,5 @@
+# リポジトリ内は LF に正規化（build_lambda.sh が CRLF だと bash で壊れるため）
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
