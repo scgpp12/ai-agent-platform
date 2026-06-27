@@ -37,7 +37,12 @@
   .card .pdf:hover{background:var(--indigo-d);text-decoration:none}
   footer{margin:46px 0 30px;color:var(--muted);font-size:13px;text-align:center}
   .count{color:var(--muted);font-size:13px;font-weight:400;margin-left:8px}
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 14px;margin:12px 0 6px;overflow-x:auto}
+  .diagram .mermaid{margin:0;text-align:center}
+  .dnote{font-size:13px;color:var(--muted);margin:2px 0 16px}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });</script>
 </head>
 <body>
 <header>
@@ -61,6 +66,75 @@
     讲解每个文件的 <b>IN / OUT</b>、<b>调用处（文件:行号）</b>、<b>内部处理逻辑</b>、<b>相互调用关系（Mermaid 图）</b>，专业词汇附<b>中文注释</b>。
     点各卡片的 <b>PDF</b> 按钮在浏览器中打开。
   </div>
+
+  <h2 class="sec">📐 整体代码结构<span class="count">monorepo</span></h2>
+  <div class="diagram">
+    <div class="mermaid">
+flowchart TB
+  subgraph FE["前端 frontend/ · Next.js / Vercel"]
+    FEp["page.tsx 登录+聊天UI"]
+    FEauth["lib/oidc.ts · providers.tsx&lt;br/&gt;Cognito 认证"]
+    FEp --> FEauth
+  end
+  subgraph BE["后端 backend/app · FastAPI / Lambda"]
+    direction TB
+    BEm["main.py 装配 + 端点&lt;br/&gt;handler.py (Mangum)"]
+    BEauth["security/auth.py&lt;br/&gt;JWT 验证"]
+    BEo["core/orchestrator.py&lt;br/&gt;编排器 (路由/串联/追踪)"]
+    BEr["core/registry.py 登记簿"]
+    BEt["core/trace.py 追踪"]
+    BEag["agents/&lt;br/&gt;knowledge · data_query · summary&lt;br/&gt;(继承 base_agent.py)"]
+    BEp["providers/&lt;br/&gt;Echo · Ollama · Bedrock"]
+    BErepo["data/ Repository&lt;br/&gt;SQLite · DynamoDB"]
+    BEc["connectors/&lt;br/&gt;Calendar stub"]
+    BEm --> BEauth
+    BEm --> BEo
+    BEo --> BEr
+    BEo --> BEt
+    BEr --> BEag
+    BEag --> BEp
+    BEag --> BErepo
+    BEo --> BEc
+  end
+  subgraph IN["基础设施 infra/ · AWS CDK (TS)"]
+    INs["platform-stack.ts&lt;br/&gt;Lambda + DynamoDB + Bedrock + Cognito + API GW"]
+  end
+  FE -->|"HTTPS + Bearer JWT"| BE
+  IN -.->|"定义 / 部署"| BE
+  BEp -.-> X1["Bedrock / Ollama"]
+  BErepo -.-> X2["DynamoDB / SQLite"]
+  BEauth -.-> X3["Cognito JWKS"]
+    </div>
+  </div>
+  <div class="dnote">分层依赖方向恒为「上→下」：API/装配 → 编排 → 登记簿 → Agent → Provider/Repo。Provider・Repository・Auth 都是抽象，本地(Echo/SQLite/HS256)与 AWS(Bedrock/DynamoDB/Cognito)靠 env 切换，业务代码不改。</div>
+
+  <h2 class="sec">🔄 程序流程（一次 /chat 请求）<span class="count">运行时</span></h2>
+  <div class="diagram">
+    <div class="mermaid">
+flowchart TD
+  U["用户 / 浏览器"] -->|"POST /chat&lt;br/&gt;message · route_mode"| GW["API Gateway&lt;br/&gt;Cognito JWT Authorizer"]
+  GW -->|"无/错 token → 401"| U
+  GW --> L["Lambda: FastAPI (Mangum)"]
+  L --> DEP["require_user&lt;br/&gt;JWKS 再验签"]
+  DEP --> H["Orchestrator.handle"]
+  H --> RT{"route_mode ?"}
+  RT -->|"rule"| R1["route_by_rule&lt;br/&gt;各 agent can_handle() 打分"]
+  RT -->|"llm"| R2["route_by_llm&lt;br/&gt;LLM 意图分类"]
+  R2 -.->|"失败兜底"| R1
+  R1 --> RUN["_run_agent&lt;br/&gt;超时 + trace 记录"]
+  R2 --> RUN
+  RUN --> AG{"选中哪个 agent"}
+  AG -->|"knowledge"| K["检索 KB → 生成回答"]
+  AG -->|"data_query"| D["抽取参数 → Repo 查询 DB"]
+  AG -->|"summary"| S["LLM 要约"]
+  K --> RES["AgentResult"]
+  D --> RES
+  S --> RES
+  RES --> O["组装&lt;br/&gt;agent · output · data · trace"]
+  O --> U
+    </div>
+  </div>
+  <div class="dnote">链式端点 <code>/chain/lead-digest</code>：data_query 先查 DB → 把结果经 <code>context['upstream']</code> 传给 summary 要约（0 件则提前结束）。每步的状态/耗时都记入 trace 一并返回。</div>
 
   <h2 class="sec">① 核心层（平台的心脏）<span class="count">5</span></h2>
   <div class="grid">
