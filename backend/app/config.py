@@ -33,6 +33,10 @@ class Settings:
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3:8b")
     ollama_embed_model: str = os.getenv("OLLAMA_EMBED_MODEL", "bge-m3")
 
+    # --- llama-swap / OpenAI 兼容（sons02 :8080 本地免费 LLM）---
+    llamaswap_base_url: str = os.getenv("LLAMASWAP_BASE_URL", "http://10.32.1.41:8080/v1")
+    llamaswap_model: str = os.getenv("LLAMASWAP_MODEL", "qwen3.6")
+
     # --- Bedrock（東京）---
     aws_region: str = os.getenv("AWS_REGION", "ap-northeast-1")
     # Claude は INFERENCE_PROFILE 必須（model-id 直叩きは不可）

@@ -35,6 +35,7 @@ from .providers import (
     HashingEmbedding,
     OllamaEmbeddingProvider,
     OllamaProvider,
+    OpenAICompatProvider,
 )
 from .schemas import ChainResponse, ChatRequest, ChatResponse
 from .security import AuthUser, require_user
@@ -48,6 +49,12 @@ def build_llm():
         return BedrockProvider(settings.bedrock_model_id, settings.aws_region)
     if settings.llm_backend == "ollama":
         return OllamaProvider(settings.ollama_base_url, settings.ollama_model, settings.step_timeout)
+    if settings.llm_backend == "llamaswap":
+        # sons02 の llama-swap(8080, OpenAI互換)。首次载模型慢→timeout 取大值。
+        return OpenAICompatProvider(
+            settings.llamaswap_base_url, settings.llamaswap_model,
+            timeout=max(settings.step_timeout, 180.0),
+        )
     return EchoLLM()  # モデル不要のフォールバック
 
 
